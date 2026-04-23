@@ -22,5 +22,30 @@
     "electron": "^33.3.2",
     "vite": "^6.1.1",
     "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "com.villagehelper.app",
+    "productName": "Village Helper",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/server",
+        "to": "server"
+      }
+    ],
+    "publish": null,
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
