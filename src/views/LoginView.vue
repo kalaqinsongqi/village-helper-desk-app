@@ -51,9 +51,7 @@
         </el-form-item>
       </el-form>
 
-      <div class="login-footer">
-        <span>默认账号: admin / admin</span>
-      </div>
+
     </div>
   </div>
 </template>
@@ -86,9 +84,11 @@ async function handleLogin() {
   loading.value = true
   try {
     const res = await login(form.username, form.password)
-    const { access_token, expires_in } = res.data
+    const { access_token, expires_in, permissions, role } = res.data
     localStorage.setItem('token', access_token)
     localStorage.setItem('tokenExpire', String(Date.now() + expires_in * 1000))
+    localStorage.setItem('permissions', JSON.stringify(permissions || []))
+    localStorage.setItem('role', role || 'user')
     ElMessage.success('登录成功')
     router.push('/main')
   } catch (err) {

@@ -1,6 +1,6 @@
 <template>
   <el-container class="main-layout">
-    <el-aside width="220px" class="sidebar">
+    <el-aside width="220px" class="sidebar" v-if="showSidebar">
       <div class="sidebar-header">
         <el-icon size="28" color="#fff"><House /></el-icon>
         <span class="app-name">Village Helper</span>
@@ -19,9 +19,14 @@
           <span>首页</span>
         </el-menu-item>
 
-        <el-menu-item index="/main/land-rights">
+        <el-menu-item index="/main/land-rights" v-if="hasMenuPermission('/main/land-rights')">
           <el-icon><MapLocation /></el-icon>
           <span>土地确权</span>
+        </el-menu-item>
+
+        <el-menu-item index="/main/users" v-if="hasMenuPermission('/main/users')">
+          <el-icon><UserFilled /></el-icon>
+          <span>用户管理</span>
         </el-menu-item>
       </el-menu>
 
@@ -45,6 +50,18 @@
     <el-container>
       <el-header class="topbar">
         <span class="page-title">{{ pageTitle }}</span>
+        <div v-if="!showSidebar" class="topbar-right">
+          <span class="topbar-username">{{ userInfo?.nickname || userInfo?.username || 'admin' }}</span>
+          <el-button
+            type="danger"
+            link
+            size="small"
+            :icon="SwitchButton"
+            @click="handleLogout"
+          >
+            退出
+          </el-button>
+        </div>
       </el-header>
       <el-main class="content">
         <router-view />
@@ -59,10 +76,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { House, HomeFilled, MapLocation, UserFilled, SwitchButton } from '@element-plus/icons-vue'
 import { getMe } from '../api/auth.js'
+import { hasMenuPermission, hasAnyVisibleMenu } from '../utils/permission.js'
 
 const route = useRoute()
 const router = useRouter()
 const userInfo = ref(null)
+
+const showSidebar = computed(() => hasAnyVisibleMenu())
 
 const activeMenu = computed(() => route.path)
 
@@ -70,6 +90,7 @@ const pageTitle = computed(() => {
   const titles = {
     '/main': '欢迎回来',
     '/main/land-rights': '土地确权管理',
+    '/main/users': '用户管理',
   }
   return titles[route.path] || ''
 })
@@ -162,6 +183,18 @@ function handleLogout() {
   font-size: 18px;
   font-weight: 500;
   color: #303133;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.topbar-username {
+  font-size: 14px;
+  color: #606266;
 }
 
 .content {

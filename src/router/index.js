@@ -28,6 +28,11 @@ const routes = [
         name: 'LandRights',
         component: () => import('../views/LandRightsView.vue'),
       },
+      {
+        path: 'users',
+        name: 'UserManage',
+        component: () => import('../views/UserManageView.vue'),
+      },
     ],
   },
 ]

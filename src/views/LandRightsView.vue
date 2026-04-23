@@ -100,6 +100,7 @@
                   详情
                 </el-button>
                 <el-button
+                  v-if="hasPermission('land:update')"
                   type="warning"
                   link
                   size="small"
@@ -310,6 +311,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, View, Edit } from '@element-plus/icons-vue'
 import { getContracts, getContractDetail, updateContract } from '../api/land.js'
+import { hasPermission } from '../utils/permission.js'
 
 const loading = ref(false)
 const tableData = ref([])
