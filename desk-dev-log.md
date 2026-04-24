@@ -3,7 +3,7 @@
 ## 项目信息
 - **项目名称**: village-helper-desk-app
 - **技术栈**: Electron + Vue3 + Element Plus
-- **Git 仓库**: https://gitlab.com/songqi/village-helper-desk-app.git
+- **Git 仓库**: https://github.com/kalaqinsongqi/village-helper-desk-app.git
 
 ## 开发记录
 
