@@ -1,32 +1,71 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, dialog } = require('electron')
 const { spawn } = require('child_process')
 const path = require('path')
 const http = require('http')
+const fs = require('fs')
 
 const isDev = !app.isPackaged
 let backendProcess = null
 
+// 日志文件，方便 Windows 上排查问题
+const logDir = path.join(app.getPath('userData'), 'logs')
+if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true })
+const logFile = path.join(logDir, 'app.log')
+
+function log(...args) {
+  const line = `[${new Date().toISOString()}] ${args.join(' ')}\n`
+  console.log(...args)
+  try { fs.appendFileSync(logFile, line) } catch {}
+}
+
 function startBackend() {
-  if (isDev) return Promise.resolve()
+  if (isDev) return Promise.resolve(true)
 
   const serverPath = path.join(process.resourcesPath, 'server', 'backend.exe')
   const serverCwd = path.join(process.resourcesPath, 'server')
 
+  // Windows Program Files 默认只读，把数据库复制到用户数据目录
+  const userDataDir = app.getPath('userData')
+  const userDbDir = path.join(userDataDir, 'data')
+  const userDbPath = path.join(userDbDir, 'app.db')
+  const bundledDbPath = path.join(serverCwd, 'data', 'app.db')
+
+  if (!fs.existsSync(userDbDir)) fs.mkdirSync(userDbDir, { recursive: true })
+  if (!fs.existsSync(userDbPath) && fs.existsSync(bundledDbPath)) {
+    log('[main] copying db to userData:', userDbPath)
+    fs.copyFileSync(bundledDbPath, userDbPath)
+  }
+
+  log('[main] serverPath:', serverPath)
+  log('[main] serverCwd:', serverCwd)
+  log('[main] server exists?', fs.existsSync(serverPath))
+  log('[main] bundled db exists?', fs.existsSync(bundledDbPath))
+  log('[main] user db exists?', fs.existsSync(userDbPath))
+
+  const env = { ...process.env, DB_PATH: userDbPath }
+
   backendProcess = spawn(serverPath, [], {
     cwd: serverCwd,
     windowsHide: true,
+    env,
   })
 
+  log('[main] backend PID:', backendProcess.pid)
+
   backendProcess.stdout?.on('data', (data) => {
-    console.log('[backend]', data.toString().trim())
+    log('[backend]', data.toString().trim())
   })
 
   backendProcess.stderr?.on('data', (data) => {
-    console.error('[backend err]', data.toString().trim())
+    log('[backend err]', data.toString().trim())
   })
 
-  backendProcess.on('exit', (code) => {
-    console.log(`[backend] exited with code ${code}`)
+  backendProcess.on('exit', (code, signal) => {
+    log(`[backend] exited with code=${code} signal=${signal}`)
+  })
+
+  backendProcess.on('error', (err) => {
+    log('[backend spawn error]', err.message)
   })
 
   // 等待后端就绪
@@ -37,19 +76,21 @@ function startBackend() {
       http
         .get('http://127.0.0.1:8000/health', (res) => {
           if (res.statusCode === 200) {
-            console.log('[backend] ready')
-            resolve()
+            log('[backend] ready')
+            resolve(true)
           } else if (attempts < 30) {
             setTimeout(check, 500)
           } else {
-            resolve() // 超时也继续
+            log('[backend] health check timeout')
+            resolve(false) // 超时标记为失败
           }
         })
-        .on('error', () => {
+        .on('error', (err) => {
           if (attempts < 30) {
             setTimeout(check, 500)
           } else {
-            resolve()
+            log('[backend] health check error:', err.message)
+            resolve(false)
           }
         })
     }
@@ -85,10 +126,12 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  try {
-    await startBackend()
-  } catch (err) {
-    console.error('Failed to start backend:', err)
+  const ok = await startBackend()
+  if (!ok) {
+    dialog.showErrorBox(
+      '后端服务启动失败',
+      '内置后端服务未能正常启动，请检查日志文件：\n' + logFile
+    )
   }
   createWindow()
 })
